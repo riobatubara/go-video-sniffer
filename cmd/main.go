@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"log"
 	"os"
@@ -11,6 +12,24 @@ import (
 	"go-video-sniffer/internal/downloader"
 	"go-video-sniffer/internal/metadata"
 )
+
+func saveMetadata(metadata *metadata.VideoMetadata, videoPath string) error {
+	metadataPath := videoPath + ".json"
+
+	file, err := os.Create(metadataPath)
+	if err != nil {
+		return fmt.Errorf("failed to create metadata file: %w", err)
+	}
+	defer file.Close()
+
+	encoder := json.NewEncoder(file)
+	encoder.SetIndent("", "  ")
+	if err := encoder.Encode(metadata); err != nil {
+		return fmt.Errorf("failed to encode metadata: %w", err)
+	}
+
+	return nil
+}
 
 func main() {
 	if len(os.Args) < 2 {
@@ -64,13 +83,12 @@ func main() {
 			continue
 		}
 
-		fmt.Println("🧠 Metadata:")
-		for _, stream := range meta.Streams {
-			if stream.CodecType == "video" {
-				fmt.Printf("Codec: %s, Resolution: %dx%d\n", stream.CodecName, stream.Width, stream.Height)
-			}
+		// Save metadata to a JSON file
+		if err := saveMetadata(meta, filePath); err != nil {
+			log.Printf("⚠️  Failed to save metadata for %s: %v", filePath, err)
 		}
-		fmt.Printf("Duration: %ss\n", meta.Format.Duration)
+
+		fmt.Println("🧠 Metadata saved to:", filePath+".json")
 		fmt.Println("--------------------------------")
 	}
 }
